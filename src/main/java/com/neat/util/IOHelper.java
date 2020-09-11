@@ -66,8 +66,9 @@ public class IOHelper {
             outputStream.write(c);
 
             if (c == '\n') {
-                IOHelper.debug(new String(byteArrayOutputStream.toByteArray()));
+//                IOHelper.debug(new String(byteArrayOutputStream.toByteArray()));
                 byteArrayOutputStream = new ByteArrayOutputStream();
+                debug(".");
             } else {
                 byteArrayOutputStream.write(c);
             }

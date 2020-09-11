@@ -27,7 +27,7 @@ public class ProxyProcessor implements Runnable {
         try {
             process();
         } catch (IOException e) {
-            e.printStackTrace();
+            IOHelper.debug(e.getMessage());
         } finally {
             close();
         }
@@ -41,11 +41,17 @@ public class ProxyProcessor implements Runnable {
         UrlEntity urlEntity = UrlEntity.getInstance(firstLine);
 
         boolean isIgnoredHost = isIgnoredHost(urlEntity.getHostName());
-        if (isIgnoredHost) {
-            this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
-        } else {
-            this.northSocket = new Socket(proxyHost, proxyPort);
+        try {
+            if (isIgnoredHost) {
+                this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
+            } else {
+                this.northSocket = new Socket(proxyHost, proxyPort);
+            }
+        } catch (IOException e) {
+            IOHelper.debug(firstLine + ": " + e.getMessage());
+            return;
         }
+
 
         InputStream northInputStream = northSocket.getInputStream();
         OutputStream northOutputStream = northSocket.getOutputStream();

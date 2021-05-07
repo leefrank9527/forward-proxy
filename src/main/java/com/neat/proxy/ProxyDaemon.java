@@ -1,5 +1,7 @@
 package com.neat.proxy;
 
+import com.neat.util.MultiThreadsPrint;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -19,7 +21,7 @@ public class ProxyDaemon implements Runnable {
         try {
             serverSocket = new ServerSocket(this.serverPort);
         } catch (IOException e) {
-            System.out.println("Failed to initial Proxy Server");
+            MultiThreadsPrint.putFinished("Failed to initial Proxy Server");
             return;
         }
 
@@ -29,7 +31,7 @@ public class ProxyDaemon implements Runnable {
                 Thread processor = new Thread(new ProxyProcessor(southSocket));
                 processor.start();
             } catch (IOException e) {
-                System.out.println(e.getMessage());
+                MultiThreadsPrint.putFinished(e.getMessage());
             }
         }
     }

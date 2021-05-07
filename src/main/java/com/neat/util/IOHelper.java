@@ -14,7 +14,7 @@ public class IOHelper {
         ByteArrayOutputStream bufLine = new ByteArrayOutputStream();
         String line = null;
         while (true) {
-            int b = 0;
+            int b;
             try {
                 b = inputStream.read();
             } catch (IOException e) {
@@ -35,13 +35,13 @@ public class IOHelper {
             }
         }
 
-        debug(line);
+        MultiThreadsPrint.putFinished(line);
 
         return line == null ? null : line.trim();
     }
 
     public static void writeln(OutputStream outputStream, String s) {
-        debug(s);
+        MultiThreadsPrint.putFinished(s);
 
         try {
             outputStream.write(s.getBytes());
@@ -55,23 +55,37 @@ public class IOHelper {
         return s == null || s.trim().length() == 0;
     }
 
-    public static void copy(InputStream inputStream, OutputStream outputStream) throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        while (true) {
-            int c = inputStream.read();
-            if (c == -1) {
-                break;
-            }
+    public static void copy(String prefix, InputStream inputStream, OutputStream outputStream) throws IOException {
+        String msg = String.format("%s, read=[0]", prefix);
+        MultiThreadsPrint.putFinished(msg);
 
-            outputStream.write(c);
+        long readCount = 0;
+        try {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            while (true) {
+                int c = inputStream.read();
+                if (c == -1) {
+                    msg = String.format("%s, read=[%d]", prefix, readCount);
+                    MultiThreadsPrint.putFinished(msg);
+                    break;
+                }
 
-            if (c == '\n') {
-//                IOHelper.debug(new String(byteArrayOutputStream.toByteArray()));
-                byteArrayOutputStream = new ByteArrayOutputStream();
-                debug(".");
-            } else {
-                byteArrayOutputStream.write(c);
+                outputStream.write(c);
+
+                readCount++;
+
+                if (c == '\n') {
+//                    MultiThreadsPrint.putFinished("\u001B[36m" + new String(byteArrayOutputStream.toByteArray()) + "\u001B[0m");
+                    byteArrayOutputStream = new ByteArrayOutputStream();
+                    msg = String.format("%s, read=[%d]", prefix, readCount);
+                    MultiThreadsPrint.putFinished(msg);
+                } else {
+                    byteArrayOutputStream.write(c);
+                }
             }
+        } finally {
+            msg = String.format("%s, read=[%d]", prefix, readCount);
+            MultiThreadsPrint.putFinished(msg);
         }
     }
 
@@ -92,7 +106,7 @@ public class IOHelper {
         }
     }
 
-    public static void debug(String s) {
-        System.out.println(s);
-    }
+//    public static void debug(String s) {
+//        System.out.println(s);
+//    }
 }

@@ -1,5 +1,7 @@
 package com.neat.proxy;
 
+import com.neat.util.MultiThreadsPrint;
+
 import java.net.URI;
 
 public class UrlEntity {
@@ -25,6 +27,11 @@ public class UrlEntity {
             entity.setScheme(SCHEME_HTTPS);
         } else {
             entity.setScheme(SCHEME_HTTP);
+        }
+
+        if (reqItems.length < 2) {
+            MultiThreadsPrint.putFinished("[WARN] Invalid request: " + request);
+            return entity;
         }
 
         URI uri;

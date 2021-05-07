@@ -1,6 +1,7 @@
 package com.neat.proxy;
 
 import com.neat.util.IOHelper;
+import com.neat.util.MultiThreadsPrint;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +28,7 @@ public class ProxyProcessor implements Runnable {
         try {
             process();
         } catch (IOException e) {
-            e.printStackTrace();
+            MultiThreadsPrint.putFinished(e.getMessage());
         } finally {
             close();
         }
@@ -41,10 +42,15 @@ public class ProxyProcessor implements Runnable {
         UrlEntity urlEntity = UrlEntity.getInstance(firstLine);
 
         boolean isIgnoredHost = isIgnoredHost(urlEntity.getHostName());
-        if (isIgnoredHost) {
-            this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
-        } else {
-            this.northSocket = new Socket(proxyHost, proxyPort);
+        try {
+            if (isIgnoredHost) {
+                this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
+            } else {
+                this.northSocket = new Socket(proxyHost, proxyPort);
+            }
+        } catch (IOException e) {
+            MultiThreadsPrint.putFinished(firstLine + ": " + e.getMessage());
+            return;
         }
 
         InputStream northInputStream = northSocket.getInputStream();
@@ -56,7 +62,11 @@ public class ProxyProcessor implements Runnable {
          */
         String transferredRequestLine = urlEntity.getTransferredRequestLine();
         if (!isIgnoredHost || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
-            IOHelper.writeln(northOutputStream, transferredRequestLine);
+            if (urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
+                IOHelper.writeln(northOutputStream, firstLine);
+            } else {
+                IOHelper.writeln(northOutputStream, transferredRequestLine);
+            }
         } else { //HTTPS without proxy
             while (true) {
                 String headerLine = IOHelper.readln(southInputStream);
@@ -72,17 +82,17 @@ public class ProxyProcessor implements Runnable {
 
         Thread tA = new Thread(() -> {
             try {
-                IOHelper.copy(southInputStream, northOutputStream);
+                IOHelper.copy(firstLine, southInputStream, northOutputStream);
             } catch (IOException e) {
-                System.out.println("Upload failed: " + e.getMessage());
+                MultiThreadsPrint.putFinished("Upload failed: " + e.getMessage());
             }
             close();
         });
         Thread tB = new Thread(() -> {
             try {
-                IOHelper.copy(northInputStream, southOutputStream);
+                IOHelper.copy(firstLine, northInputStream, southOutputStream);
             } catch (IOException e) {
-                System.out.println("Download failed: " + e.getMessage());
+                MultiThreadsPrint.putFinished("Download failed: " + e.getMessage());
             }
             close();
         });
@@ -94,7 +104,7 @@ public class ProxyProcessor implements Runnable {
             tA.join();
             tB.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            MultiThreadsPrint.putFinished(e.getMessage());
         }
 
         System.out.println("[DONE] " + urlEntity.getUrl());
@@ -104,27 +114,33 @@ public class ProxyProcessor implements Runnable {
         try {
             TimeUnit.MILLISECONDS.sleep(200);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            MultiThreadsPrint.putFinished(e.getMessage());
         }
 
         if (this.southSocket != null && !this.southSocket.isClosed()) {
             try {
                 this.southSocket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                MultiThreadsPrint.putFinished(e.getMessage());
             }
         }
         if (this.northSocket != null && !northSocket.isClosed()) {
             try {
                 this.northSocket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                MultiThreadsPrint.putFinished(e.getMessage());
             }
         }
     }
 
     private static boolean isIgnoredHost(String hostName) {
-        return ignoredHosts.contains(hostName.toLowerCase());
+        for (String s : ignoredHosts) {
+            if (hostName.contains(s)) {
+                return true;
+            }
+        }
+//        return ignoredHosts.contains(hostName.toLowerCase());
+        return false;
     }
 
     public static List<String> getIgnoredHosts() {

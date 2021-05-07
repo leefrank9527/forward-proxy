@@ -1,5 +1,6 @@
 package com.neat.proxy;
 
+import com.neat.util.MultiThreadsPrint;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -49,11 +50,13 @@ public class ProxyApplication implements CommandLineRunner {
 
         printGreetingMessage();
 
+        MultiThreadsPrint.init();
+
         proxy.join();
     }
 
-    private static void printGreetingMessage() {
-        String printInfo = "  Proxy Initialed  ";
+    private void printGreetingMessage() {
+        String printInfo = String.format("  Proxy Initialed, PORT:%d  ", thisProxyPort);
         int prefixLength = (PRINTLN_SEPARATOR_LINE.length() - printInfo.length()) / 2;
         String prefixInfo = "-".repeat(prefixLength);
         System.out.println(PRINTLN_SEPARATOR_LINE);

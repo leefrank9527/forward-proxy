@@ -10,6 +10,8 @@ import java.net.URL;
 import java.net.URLConnection;
 
 public class IOHelper {
+    private static final int STREAM_BUFFER_LENGTH = 1024;
+
     public static String readln(InputStream inputStream) {
         ByteArrayOutputStream bufLine = new ByteArrayOutputStream();
         String line = null;
@@ -56,35 +58,28 @@ public class IOHelper {
     }
 
     public static void copy(String prefix, InputStream inputStream, OutputStream outputStream) throws IOException {
+        final byte[] buffer = new byte[STREAM_BUFFER_LENGTH];
+
         String msg = String.format("%s, read=[0]", prefix);
         MultiThreadsPrint.putFinished(msg);
 
-        long readCount = 0;
+        long countRead = 0, previousCountRead = 0;
         try {
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            while (true) {
-                int c = inputStream.read();
-                if (c == -1) {
-                    msg = String.format("%s, read=[%d]", prefix, readCount);
+            int read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
+            while (read > -1) {
+                outputStream.write(buffer, 0, read);
+
+                countRead += read;
+
+                if ((countRead - previousCountRead) >= STREAM_BUFFER_LENGTH * 1024) {
+                    msg = String.format("%s, read=[%d]", prefix, countRead);
                     MultiThreadsPrint.putFinished(msg);
-                    break;
+                    previousCountRead = countRead;
                 }
-
-                outputStream.write(c);
-
-                readCount++;
-
-                if (c == '\n') {
-//                    MultiThreadsPrint.putFinished("\u001B[36m" + new String(byteArrayOutputStream.toByteArray()) + "\u001B[0m");
-                    byteArrayOutputStream = new ByteArrayOutputStream();
-                    msg = String.format("%s, read=[%d]", prefix, readCount);
-                    MultiThreadsPrint.putFinished(msg);
-                } else {
-                    byteArrayOutputStream.write(c);
-                }
+                read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
             }
         } finally {
-            msg = String.format("%s, read=[%d]", prefix, readCount);
+            msg = String.format("%s, read=[%d]", prefix, countRead);
             MultiThreadsPrint.putFinished(msg);
         }
     }

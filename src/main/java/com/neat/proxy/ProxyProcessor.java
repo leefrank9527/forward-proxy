@@ -84,17 +84,17 @@ public class ProxyProcessor implements Runnable {
             try {
                 IOHelper.copy(firstLine, southInputStream, northOutputStream);
             } catch (IOException e) {
-                MultiThreadsPrint.putFinished("Upload failed: " + e.getMessage());
+                MultiThreadsPrint.putFinished("Upload: " + e.getMessage());
             }
-            close();
+//            close();
         });
         Thread tB = new Thread(() -> {
             try {
                 IOHelper.copy(firstLine, northInputStream, southOutputStream);
             } catch (IOException e) {
-                MultiThreadsPrint.putFinished("Download failed: " + e.getMessage());
+                MultiThreadsPrint.putFinished("Download: " + e.getMessage());
             }
-            close();
+//            close();
         });
 
         tA.start();
@@ -105,6 +105,8 @@ public class ProxyProcessor implements Runnable {
             tB.join();
         } catch (InterruptedException e) {
             MultiThreadsPrint.putFinished(e.getMessage());
+        } finally {
+            close();
         }
 
         System.out.println("[DONE] " + urlEntity.getUrl());

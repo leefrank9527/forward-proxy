@@ -58,7 +58,8 @@ public class ProxyApplication implements CommandLineRunner {
     private void printGreetingMessage() {
         String printInfo = String.format("  Proxy Initialed, PORT:%d  ", thisProxyPort);
         int prefixLength = (PRINTLN_SEPARATOR_LINE.length() - printInfo.length()) / 2;
-        String prefixInfo = "-".repeat(prefixLength);
+//        String prefixInfo = "-".repeat(prefixLength);
+        String prefixInfo="";
         System.out.println(PRINTLN_SEPARATOR_LINE);
         System.out.println(prefixInfo + printInfo + prefixInfo);
         System.out.println(PRINTLN_SEPARATOR_LINE);

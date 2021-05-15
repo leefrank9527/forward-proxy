@@ -2,11 +2,12 @@ package com.neat.proxy;
 
 import com.neat.util.IOHelper;
 import com.neat.util.MultiThreadsPrint;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
+import java.net.*;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,6 +48,8 @@ public class ProxyProcessor implements Runnable {
                 this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
             } else {
                 this.northSocket = new Socket(proxyHost, proxyPort);
+//                this.northSocket = new Socket(createProxy(proxyHost, proxyPort));
+//                this.northSocket.connect(new InetSocketAddress(urlEntity.getHostName(), urlEntity.getHostPort()));
             }
         } catch (IOException e) {
             MultiThreadsPrint.putFinished(firstLine + ": " + e.getMessage());
@@ -136,12 +139,15 @@ public class ProxyProcessor implements Runnable {
     }
 
     private static boolean isIgnoredHost(String hostName) {
+        if (StringUtils.isEmpty(hostName)) {
+            return false;
+        }
+
         for (String s : ignoredHosts) {
             if (hostName.contains(s)) {
                 return true;
             }
         }
-//        return ignoredHosts.contains(hostName.toLowerCase());
         return false;
     }
 
@@ -154,6 +160,16 @@ public class ProxyProcessor implements Runnable {
         for (String item : items) {
             ProxyProcessor.ignoredHosts.add(item.toLowerCase());
         }
+    }
+
+    private static Proxy createProxy(String proxyHost, int proxyPort) {
+        Authenticator.setDefault(new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication("leefr", "wangyang+116".toCharArray());
+            }
+        });
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(proxyHost, proxyPort));
+        return proxy;
     }
 
     public static String getProxyHost() {

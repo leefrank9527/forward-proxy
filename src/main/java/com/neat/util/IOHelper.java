@@ -77,6 +77,7 @@ public class IOHelper {
                     previousCountRead = countRead;
                 }
                 read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
+                System.out.println(new String(buffer));
             }
         } finally {
             msg = String.format("%s, read=[%d]", prefix, countRead);

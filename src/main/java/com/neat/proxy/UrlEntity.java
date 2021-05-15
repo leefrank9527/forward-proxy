@@ -98,9 +98,9 @@ public class UrlEntity {
 
     public String getTransferredRequestLine() {
         String[] reqItems = request.split(" ");
-        String method = reqItems[0];
-        String originalService = reqItems[1];
-        String version = reqItems[2];
+        String method = reqItems.length >= 1 ? reqItems[0] : "Unknown";
+        String originalService = reqItems.length >= 2 ? reqItems[1] : "Unknown";
+        String version = reqItems.length >= 3 ? reqItems[2] : "Unknown";
 
         if (!originalService.startsWith("http")) {
             return request;

@@ -68,7 +68,7 @@ public class IOHelper {
             int read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
             while (read > -1) {
                 outputStream.write(buffer, 0, read);
-
+                System.out.print(new String(buffer, 0, read));
                 countRead += read;
 
                 if ((countRead - previousCountRead) >= STREAM_BUFFER_LENGTH * 1024) {
@@ -82,6 +82,7 @@ public class IOHelper {
         } finally {
             msg = String.format("%s, read=[%d]", prefix, countRead);
             MultiThreadsPrint.putFinished(msg);
+            System.out.println();
         }
     }
 

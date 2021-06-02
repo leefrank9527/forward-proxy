@@ -43,7 +43,7 @@ public class UrlEntity {
         entity.setHostName(uri.getHost());
         entity.setHostPort(uri.getPort() <= 0 ? 80 : uri.getPort());
 
-        entity.setUrl(String.format("%s://%s:%d", entity.getMethod(), entity.getHostName(), entity.getHostPort()));
+        entity.setUrl(String.format("%s://%s:%d", entity.getScheme(), entity.getHostName(), entity.getHostPort()));
 
         return entity;
     }

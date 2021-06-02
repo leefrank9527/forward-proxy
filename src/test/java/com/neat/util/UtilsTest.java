@@ -19,7 +19,8 @@ public class UtilsTest {
     @Test
     public void testHttpConnectionInternational() throws IOException {
         setProxy();
-        processTest("http://www.google.com/");
+//        processTest("http://www.google.com/");
+        processTest("http://builds.archive.org/maven2/org/apache/hadoop/hadoop-core/0.20.2-cdh3u4/hadoop-core-0.20.2-cdh3u4.jar");
     }
 
     //    @Ignore
@@ -65,15 +66,15 @@ public class UtilsTest {
 
     private void setProxy() {
 //        System.setProperty("java.net.useSystemProxies", "true");
-//        System.setProperty("http.proxyHost", "wlgproxyforservers.dia.govt.nz");
-//        System.setProperty("http.proxyPort", "8080");
-//        System.setProperty("https.proxyHost", "wlgproxyforservers.dia.govt.nz");
-//        System.setProperty("https.proxyPort", "8080");
-
-        System.setProperty("http.proxyHost", "webaccess.dia.govt.nz");
+        System.setProperty("http.proxyHost", "wlgproxyforservers.dia.govt.nz");
         System.setProperty("http.proxyPort", "8080");
-        System.setProperty("https.proxyHost", "webaccess.dia.govt.nz");
+        System.setProperty("https.proxyHost", "wlgproxyforservers.dia.govt.nz");
         System.setProperty("https.proxyPort", "8080");
+
+//        System.setProperty("http.proxyHost", "webaccess.dia.govt.nz");
+//        System.setProperty("http.proxyPort", "8080");
+//        System.setProperty("https.proxyHost", "webaccess.dia.govt.nz");
+//        System.setProperty("https.proxyPort", "8080");
     }
 
     private static Proxy createProxy(String proxyAddr, int proxyPort) {

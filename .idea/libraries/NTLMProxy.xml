@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="NTLMProxy">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../myproxy/lib/NTLMProxy.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

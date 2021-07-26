@@ -14,13 +14,14 @@ public class UtilsTest {
     public void testHttpConnectionDomestic() throws IOException {
         setProxy();
         processTest("http://www.baidu.com/");
+//        processTest("http://dps.exlibris.com/repository/SipWebServices?wsdl");
     }
 
     @Test
     public void testHttpConnectionInternational() throws IOException {
         setProxy();
-//        processTest("http://www.google.com/");
-        processTest("http://builds.archive.org/maven2/org/apache/hadoop/hadoop-core/0.20.2-cdh3u4/hadoop-core-0.20.2-cdh3u4.jar");
+        processTest("http://www.google.com/");
+//        processTest("http://builds.archive.org/maven2/org/apache/hadoop/hadoop-core/0.20.2-cdh3u4/hadoop-core-0.20.2-cdh3u4.jar");
     }
 
     //    @Ignore
@@ -33,8 +34,8 @@ public class UtilsTest {
     @Test
     public void testHttpsConnectionInternational() throws IOException {
         setProxy();
-//        processTest("https://www.google.com/");
-        processTest("https://plugins.gradle.org/m2/org/springframework/boot/spring-boot-gradle-plugin/2.3.1.RELEASE/spring-boot-gradle-plugin-2.3.1.RELEASE.pom");
+        processTest("https://www.google.com/");
+//        processTest("https://plugins.gradle.org/m2/org/springframework/boot/spring-boot-gradle-plugin/2.3.1.RELEASE/spring-boot-gradle-plugin-2.3.1.RELEASE.pom");
 
     }
 
@@ -66,15 +67,15 @@ public class UtilsTest {
 
     private void setProxy() {
 //        System.setProperty("java.net.useSystemProxies", "true");
-        System.setProperty("http.proxyHost", "wlgproxyforservers.dia.govt.nz");
-        System.setProperty("http.proxyPort", "8080");
-        System.setProperty("https.proxyHost", "wlgproxyforservers.dia.govt.nz");
-        System.setProperty("https.proxyPort", "8080");
-
-//        System.setProperty("http.proxyHost", "webaccess.dia.govt.nz");
+//        System.setProperty("http.proxyHost", "wlgproxyforservers.dia.govt.nz");
 //        System.setProperty("http.proxyPort", "8080");
-//        System.setProperty("https.proxyHost", "webaccess.dia.govt.nz");
+//        System.setProperty("https.proxyHost", "wlgproxyforservers.dia.govt.nz");
 //        System.setProperty("https.proxyPort", "8080");
+
+        System.setProperty("http.proxyHost", "webaccess.dia.govt.nz");
+        System.setProperty("http.proxyPort", "8080");
+        System.setProperty("https.proxyHost", "webaccess.dia.govt.nz");
+        System.setProperty("https.proxyPort", "8080");
     }
 
     private static Proxy createProxy(String proxyAddr, int proxyPort) {

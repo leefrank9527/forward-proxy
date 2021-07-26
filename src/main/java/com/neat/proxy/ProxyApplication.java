@@ -28,6 +28,19 @@ public class ProxyApplication implements CommandLineRunner {
     @Value("${proxy.origin.port}")
     private int originProxyPort;
 
+    @Value("${proxy.origin.addr}")
+    private String originProxyAddress;
+
+    @Value("${proxy.domestic.host}")
+    private String domesticProxyHost;
+
+    @Value("${proxy.domestic.port}")
+    private int domesticProxyPort;
+
+    @Value("${proxy.domestic.addr}")
+    private String domesticProxyAddress;
+
+
     public static void main(String[] args) {
         SpringApplication.run(ProxyApplication.class, args);
     }
@@ -41,8 +54,12 @@ public class ProxyApplication implements CommandLineRunner {
         }
 
         ProxyProcessor.setIgnoredHosts(thisProxyIgnore);
-        ProxyProcessor.setProxyHost(originProxyHost);
-        ProxyProcessor.setProxyPort(originProxyPort);
+        ProxyProcessor.setOriginProxyHost(originProxyHost);
+        ProxyProcessor.setOriginProxyPort(originProxyPort);
+        ProxyProcessor.setOriginProxyAddress(originProxyAddress);
+        ProxyProcessor.setDomesticProxyHost(domesticProxyHost);
+        ProxyProcessor.setDomesticProxyPort(domesticProxyPort);
+        ProxyProcessor.setDomesticProxyAddress(domesticProxyAddress);
 
         ProxyDaemon daemon = new ProxyDaemon(thisProxyPort);
         Thread proxy = new Thread(daemon);
@@ -59,7 +76,7 @@ public class ProxyApplication implements CommandLineRunner {
         String printInfo = String.format("  Proxy Initialed, PORT:%d  ", thisProxyPort);
         int prefixLength = (PRINTLN_SEPARATOR_LINE.length() - printInfo.length()) / 2;
 //        String prefixInfo = "-".repeat(prefixLength);
-        String prefixInfo="";
+        String prefixInfo = "";
         System.out.println(PRINTLN_SEPARATOR_LINE);
         System.out.println(prefixInfo + printInfo + prefixInfo);
         System.out.println(PRINTLN_SEPARATOR_LINE);

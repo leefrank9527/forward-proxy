@@ -2,9 +2,12 @@ package com.neat.util;
 
 import com.neat.proxy.UrlEntity;
 
-public class EntityHostRoute {
+import java.net.Proxy;
+
+public class EntityProxyRoute {
     private String host;
     private int port;
+    private Proxy proxy;
     private ReachableType reachableType;
 
     public String getHost() {
@@ -21,6 +24,14 @@ public class EntityHostRoute {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public Proxy getProxy() {
+        return proxy;
+    }
+
+    public void setProxy(Proxy proxy) {
+        this.proxy = proxy;
     }
 
     public ReachableType getReachableType() {

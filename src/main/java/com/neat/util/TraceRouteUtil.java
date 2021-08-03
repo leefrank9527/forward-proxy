@@ -1,23 +1,20 @@
 package com.neat.util;
 
 import com.neat.proxy.UrlEntity;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.*;
 
 public class TraceRouteUtil {
     private static final List<String> ignoredHostsList = Collections.synchronizedList(new LinkedList<>());
     private static final String _CACHED_ROUTE = "conf/cached.txt";
-    private static final Map<String, EntityHostRoute> routes = new HashMap<>();
+    private static final Map<String, EntityProxyRoute> routes = new HashMap<>();
 
-    private static String localProxyHost, remoteProxyHost;
-    private static int localProxyPort, remoteProxyPort;
+    private static final List<EntityProxyRoute> PROXY_ROUTES = new ArrayList<>();
 
     public static void init() {
         File cachedRouteFile = new File(_CACHED_ROUTE);
@@ -29,7 +26,7 @@ public class TraceRouteUtil {
             List<String> lines = Files.readAllLines(cachedRouteFile.toPath());
             lines.stream().filter(StringUtils::isNotEmpty).forEach(line -> {
                 String[] items = line.split(" ");
-                EntityHostRoute entity = new EntityHostRoute();
+                EntityProxyRoute entity = new EntityProxyRoute();
                 entity.setHost(items[0]);
                 entity.setPort(Integer.parseInt(items[1]));
                 entity.setReachableType(ReachableType.valueOf(items[2]));
@@ -37,155 +34,73 @@ public class TraceRouteUtil {
                 routes.put(entity.getKey(), entity);
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 
-    synchronized public static void putEntityHostRoute(UrlEntity urlEntity, ReachableType reachableType) {
-        EntityHostRoute entity = new EntityHostRoute();
-        entity.setHost(urlEntity.getHostName());
-        entity.setPort(urlEntity.getHostPort());
-        entity.setReachableType(reachableType);
+    synchronized private static void putEntityHostRoute(UrlEntity urlEntity, EntityProxyRoute proxyRoute) {
+        String key = EntityProxyRoute.getKeyOfUrlEntity(urlEntity);
 
-        if (routes.containsKey(entity.getKey()) || reachableType == ReachableType.PROXY_UNKNOWN) {
+        if (routes.containsKey(key) || proxyRoute.getReachableType() == ReachableType.PROXY_UNKNOWN) {
             return;
         }
 
-        routes.put(entity.getKey(), entity);
+        routes.put(key, proxyRoute);
 
-        File cachedRouteFile = new File(_CACHED_ROUTE);
-        try {
-            FileUtils.write(cachedRouteFile, entity.getUnl() + System.lineSeparator(), Charset.defaultCharset(), true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        File cachedRouteFile = new File(_CACHED_ROUTE);
+//        try {
+//            FileUtils.write(cachedRouteFile, proxyRoute.getUnl() + System.lineSeparator(), Charset.defaultCharset(), true);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
-    public static ReachableType getReachableType(UrlEntity urlEntity) {
-        String key = EntityHostRoute.getKeyOfUrlEntity(urlEntity);
+    public static EntityProxyRoute getProxyRoute(UrlEntity urlEntity) {
+        String key = EntityProxyRoute.getKeyOfUrlEntity(urlEntity);
 
-        EntityHostRoute entity = routes.get(key);
+        EntityProxyRoute proxyRoute = routes.get(key);
 
-        if (entity != null && entity.getReachableType() != ReachableType.PROXY_UNKNOWN) {
-            return entity.getReachableType();
+        if (proxyRoute != null && proxyRoute.getReachableType() != ReachableType.PROXY_UNKNOWN) {
+            return proxyRoute;
         }
 
-        ReachableType reachableType = tryReachableType(urlEntity);
+        proxyRoute = tryReachableType(urlEntity);
 
-        putEntityHostRoute(urlEntity, reachableType);
+        putEntityHostRoute(urlEntity, proxyRoute);
 
-        return reachableType;
+        return proxyRoute;
     }
 
-    public static ReachableType tryReachableType(UrlEntity urlEntity) {
+    public static EntityProxyRoute tryReachableType(UrlEntity urlEntity) {
         boolean ignoreReachable = isIgnoredHost(urlEntity.getHostName()); //isDirectReachable(urlEntity.getHostName(), urlEntity.getHostPort());
         if (ignoreReachable) {
-            return ReachableType.PROXY_IGNORE;
-        }
-
-        boolean directReachable = false;
-
-        try {
-            directReachable = isDirectReachable(urlEntity.getUrl());
-        } catch (Exception e) {
-            //e.printStackTrace();
-        }
-
-        if (directReachable) {
-            return ReachableType.PROXY_IGNORE;
-        }
-
-        boolean localProxyReachable = false;
-
-        try {
-            localProxyReachable = isLocalProxyReachable(urlEntity.getUrl());
-        } catch (Exception e) {
-            //e.printStackTrace();
-        }
-
-        if (localProxyReachable) {
-            return ReachableType.PROXY_LOCAL;
+            EntityProxyRoute proxyRoute = new EntityProxyRoute();
+            proxyRoute.setReachableType(ReachableType.PROXY_IGNORE);
+            return proxyRoute;
         }
 
 
-        boolean remoteProxyReachable = false;
-
-        try {
-            remoteProxyReachable = isRemoteProxyReachable(urlEntity.getUrl());
-        } catch (Exception e) {
-            //e.printStackTrace();
+        for (EntityProxyRoute proxyRoute : PROXY_ROUTES) {
+            if (isProxyReachable(urlEntity.getUrl(), proxyRoute.getProxy())) {
+                return proxyRoute;
+            }
         }
 
-        if (remoteProxyReachable) {
-            return ReachableType.PROXY_REMOTE;
-        }
-
-        return ReachableType.PROXY_UNKNOWN;
+        EntityProxyRoute proxyRoute = new EntityProxyRoute();
+        proxyRoute.setReachableType(ReachableType.PROXY_UNKNOWN);
+        return proxyRoute;
     }
 
-//    public static boolean isDirectReachable(String host, int port) {
-//        boolean reachable = false;
-//        try {
-//            Socket socket = new Socket(host, port);
-//            socket.getInetAddress().isReachable(200);
-//            reachable = true;
-//        } catch (IOException e) {
-//            reachable = false;
-//        }
-//
-//        System.out.printf("%s:%d reachable=>%s \r\n", host, port, Boolean.toString(reachable));
-//
-//        return reachable;
-//    }
 
-    public static boolean isDirectReachable(String url) {
+    public static boolean isProxyReachable(String url, Proxy proxy) {
         try {
-            URL u = new URL(url);
-            HttpURLConnection conn = (HttpURLConnection) u.openConnection();
-            conn.setConnectTimeout(1000);
-            conn.setReadTimeout(1000);
-            int rst = conn.getResponseCode();
-
-            System.out.println(url + "\t" + rst);
-
-            return rst < 500;
-        } catch (IOException e) {
-//            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public static boolean isLocalProxyReachable(String url) {
-        try {
-            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(localProxyHost, localProxyPort));
-
             URL u = new URL(url);
             HttpURLConnection conn = (HttpURLConnection) u.openConnection(proxy);
-            conn.setConnectTimeout(30000);
-            conn.setReadTimeout(30000);
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
             int rst = conn.getResponseCode();
 
-            System.out.println(url + "\t" + rst);
-
-            return rst < 500;
-        } catch (IOException e) {
-//            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public static boolean isRemoteProxyReachable(String url) {
-        try {
-
-            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(remoteProxyHost, remoteProxyPort));
-
-            URL u = new URL(url);
-            HttpURLConnection conn = (HttpURLConnection) u.openConnection(proxy);
-            conn.setConnectTimeout(30000);
-            conn.setReadTimeout(30000);
-            int rst = conn.getResponseCode();
-
-            System.out.println(url + "\t" + rst);
+            //System.out.println(url + "\t" + rst);
 
             return rst < 500;
         } catch (IOException e) {
@@ -193,22 +108,6 @@ public class TraceRouteUtil {
             return false;
         }
 
-    }
-
-    public static String getLocalProxyHost() {
-        return localProxyHost;
-    }
-
-    public static void setLocalProxyHost(String localProxyHost) {
-        TraceRouteUtil.localProxyHost = localProxyHost;
-    }
-
-    public static int getLocalProxyPort() {
-        return localProxyPort;
-    }
-
-    public static void setLocalProxyPort(int localProxyPort) {
-        TraceRouteUtil.localProxyPort = localProxyPort;
     }
 
     private static boolean isIgnoredHost(String hostName) {
@@ -229,19 +128,21 @@ public class TraceRouteUtil {
         ignoredHostsList.addAll(Arrays.asList(items));
     }
 
-    public static String getRemoteProxyHost() {
-        return remoteProxyHost;
-    }
+    public static void setProxyServers(String[] proxyServers) {
+        for (String proxyLink : proxyServers) {
+            EntityProxyRoute proxyRoute = new EntityProxyRoute();
+            String[] items = proxyLink.split(":");
 
-    public static void setRemoteProxyHost(String remoteProxyHost) {
-        TraceRouteUtil.remoteProxyHost = remoteProxyHost;
-    }
+            String host = items[0];
+            int port = Integer.parseInt(items[1]);
 
-    public static int getRemoteProxyPort() {
-        return remoteProxyPort;
-    }
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(host, port));
 
-    public static void setRemoteProxyPort(int remoteProxyPort) {
-        TraceRouteUtil.remoteProxyPort = remoteProxyPort;
+            proxyRoute.setHost(host);
+            proxyRoute.setPort(port);
+            proxyRoute.setProxy(proxy);
+            proxyRoute.setReachableType(ReachableType.PROXY_REMOTE);
+            PROXY_ROUTES.add(proxyRoute);
+        }
     }
 }

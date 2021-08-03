@@ -1,5 +1,4 @@
 package com.neat.util;
-
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -8,17 +7,12 @@ import java.util.concurrent.TimeUnit;
 public class MultiThreadsPrint {
     private static final ScheduledThreadPoolExecutor _schedule_executor = new ScheduledThreadPoolExecutor(256);
     private static final String lineSeparator = System.lineSeparator();
-    private static final Map<String, Message> msgQueue = new Hashtable<>();
+    private static final Map<String, Message> msgQueue = new HashMap<>();
     private static int countPreviousUnfinished = 0;
     private static ScheduledFuture<?> future;
 
     public static void init() {
-        Runnable handler = new Runnable() {
-            @Override
-            public void run() {
-                print();
-            }
-        };
+        Runnable handler = MultiThreadsPrint::print;
         future = _schedule_executor.scheduleWithFixedDelay(handler, 500, 250, TimeUnit.MILLISECONDS);
     }
 
@@ -29,6 +23,7 @@ public class MultiThreadsPrint {
     }
 
     synchronized private static void print() {
+//        System.out.print("\b".repeat(countPreviousUnfinished));
         if (countPreviousUnfinished > 0) {
             System.out.printf("\033[%dA", countPreviousUnfinished);
             System.out.printf("\033[2K");
@@ -50,23 +45,23 @@ public class MultiThreadsPrint {
             }
         });
         countPreviousUnfinished = msgQueue.size() - finishedKey.size();
+//        countPreviousUnfinished=unfinishedBuf.length();
         finishedKey.forEach(msgQueue::remove);
         System.out.print(finishedBuf.toString());
         System.out.print(unfinishedBuf.toString());
     }
 
     synchronized private static void put(String key, String info, boolean finished) {
-//        Message msg;
-//        if (msgQueue.containsKey(key)) {
-//            msg = msgQueue.get(key);
-//        } else {
-//            msg = new Message();
-//        }
-//        msg.setKey(key);
-//        msg.setFinished(finished);
-//        msg.setInfo(info);
-//        msgQueue.put(key, msg);
-        System.out.println(info);
+        Message msg;
+        if (msgQueue.containsKey(key)) {
+            msg = msgQueue.get(key);
+        } else {
+            msg = new Message();
+        }
+        msg.setKey(key);
+        msg.setFinished(finished);
+        msg.setInfo(info);
+        msgQueue.put(key, msg);
     }
 
 

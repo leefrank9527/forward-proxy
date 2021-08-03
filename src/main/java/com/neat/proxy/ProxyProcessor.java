@@ -1,28 +1,14 @@
 package com.neat.proxy;
 
-import com.neat.util.IOHelper;
-import com.neat.util.MultiThreadsPrint;
-import com.neat.util.ReachableType;
-import com.neat.util.TraceRouteUtil;
-import org.apache.commons.lang3.StringUtils;
+import com.neat.util.*;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ProxyProcessor implements Runnable {
-    private static final List<String> originProxyAddress = Collections.synchronizedList(new LinkedList<>());
-    private static final List<String> domesticProxyAddress = Collections.synchronizedList(new LinkedList<>());
-
-    private static String originProxyHost, domesticProxyHost;
-    private static int originProxyPort, domesticProxyPort;
-    //private static String originProxyAddress,domesticProxyAddress;
-
     private final Socket southSocket;
     private Socket northSocket;
 
@@ -48,19 +34,16 @@ public class ProxyProcessor implements Runnable {
         String firstLine = IOHelper.readln(southInputStream);
         UrlEntity urlEntity = UrlEntity.getInstance(firstLine);
 
-        ReachableType reachableType = TraceRouteUtil.getReachableType(urlEntity);
-        if (reachableType == ReachableType.PROXY_IGNORE) {
+        EntityProxyRoute proxyRoute = TraceRouteUtil.getProxyRoute(urlEntity);
+        if (proxyRoute.getReachableType() == ReachableType.PROXY_IGNORE) {
             this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
-        } else if (reachableType == ReachableType.PROXY_LOCAL) {
-            this.northSocket = new Socket(domesticProxyHost, domesticProxyPort);
-        } else if (reachableType == ReachableType.PROXY_REMOTE) {
-            this.northSocket = new Socket(originProxyHost, originProxyPort);
+        } else if (proxyRoute.getReachableType() == ReachableType.PROXY_LOCAL || proxyRoute.getReachableType() == ReachableType.PROXY_REMOTE) {
+            this.northSocket = new Socket(proxyRoute.getHost(), proxyRoute.getPort());
         } else {
             MultiThreadsPrint.putFinished(firstLine + ": " + "Failed to get the reachable");
             close();
             return;
         }
-
 
         InputStream northInputStream = northSocket.getInputStream();
         OutputStream northOutputStream = northSocket.getOutputStream();
@@ -70,13 +53,13 @@ public class ProxyProcessor implements Runnable {
           2. For HTTPS without Proxy: skipped HTTPS negotiation headers.
          */
         String transferredRequestLine = urlEntity.getTransferredRequestLine();
-        if (reachableType != ReachableType.PROXY_IGNORE || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
+        if (proxyRoute.getReachableType() != ReachableType.PROXY_IGNORE || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
             if (urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
                 IOHelper.writeln(northOutputStream, firstLine);
             } else {
                 IOHelper.writeln(northOutputStream, transferredRequestLine);
             }
-        } else { //HTTPS without proxy
+        } else { //HTTPS without proxy: to skip the lines for proxy
             while (true) {
                 String headerLine = IOHelper.readln(southInputStream);
                 if (IOHelper.isNull(headerLine)) {
@@ -92,15 +75,17 @@ public class ProxyProcessor implements Runnable {
 
         Thread tA = new Thread(() -> {
             try {
-                IOHelper.copy(firstLine, southInputStream, northOutputStream);
-            } catch (IOException e) {
+                String prefixFormat = urlEntity.getHostName() + " [SEND] %d Bytes";
+                IOHelper.copy(prefixFormat, southInputStream, northOutputStream);
+            } catch (IOException | InterruptedException e) {
                 MultiThreadsPrint.putFinished("Upload: " + e.getMessage());
             }
         });
         Thread tB = new Thread(() -> {
             try {
-                IOHelper.copy(firstLine, northInputStream, southOutputStream);
-            } catch (IOException e) {
+                String prefixFormat = urlEntity.getHostName() + " [RECV] %d Bytes";
+                IOHelper.copy(prefixFormat, northInputStream, southOutputStream);
+            } catch (IOException | InterruptedException e) {
                 MultiThreadsPrint.putFinished("Download: " + e.getMessage());
             }
         });
@@ -117,7 +102,7 @@ public class ProxyProcessor implements Runnable {
             close();
         }
 
-        System.out.println("[DONE] " + urlEntity.getUrl());
+        //System.out.println("[DONE] " + urlEntity.getUrl());
     }
 
     private void close() {
@@ -143,60 +128,4 @@ public class ProxyProcessor implements Runnable {
         }
     }
 
-
-    private static boolean isDomesticHost(String hostName) {
-        if (StringUtils.isEmpty(hostName)) {
-            return false;
-        }
-
-        for (String s : domesticProxyAddress) {
-            if (hostName.contains(s)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-
-//    private static Proxy createProxy(String proxyHost, int proxyPort) {
-//        Authenticator.setDefault(new Authenticator() {
-//            protected PasswordAuthentication getPasswordAuthentication() {
-//                return new PasswordAuthentication("leefr", "wangyang+116".toCharArray());
-//            }
-//        });
-//        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(proxyHost, proxyPort));
-//        return proxy;
-//    }
-
-    public static void setOriginProxyHost(String originProxyHost) {
-        ProxyProcessor.originProxyHost = originProxyHost;
-    }
-
-    public static void setDomesticProxyHost(String domesticProxyHost) {
-        ProxyProcessor.domesticProxyHost = domesticProxyHost;
-    }
-
-    public static void setOriginProxyPort(int originProxyPort) {
-        ProxyProcessor.originProxyPort = originProxyPort;
-    }
-
-    public static void setDomesticProxyPort(int domesticProxyPort) {
-        ProxyProcessor.domesticProxyPort = domesticProxyPort;
-    }
-
-    public static void setOriginProxyAddress(String originProxyAddress) {
-        String[] items = originProxyAddress.split(";");
-        for (String item : items) {
-            ProxyProcessor.originProxyAddress.add(item.toLowerCase());
-        }
-
-    }
-
-    public static void setDomesticProxyAddress(String domesticProxyAddress) {
-        String[] items = domesticProxyAddress.split(";");
-        for (String item : items) {
-            ProxyProcessor.domesticProxyAddress.add(item.toLowerCase());
-        }
-    }
 }

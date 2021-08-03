@@ -8,7 +8,7 @@ import java.net.Socket;
 
 @SuppressWarnings("InfiniteLoopStatement")
 public class ProxyDaemon implements Runnable {
-    private int serverPort;
+    private final int serverPort;
 
     public ProxyDaemon(int serverPort) {
         this.serverPort = serverPort;

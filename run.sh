@@ -6,4 +6,4 @@
 
 java -jar build/libs/proxy-1.0-SNAPSHOT.jar &
 
-cntlm &
+#cntlm &

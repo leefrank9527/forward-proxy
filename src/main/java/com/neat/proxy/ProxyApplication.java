@@ -17,30 +17,14 @@ import java.util.Arrays;
 public class ProxyApplication implements CommandLineRunner {
     private static final String PRINTLN_SEPARATOR_LINE = "^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^ ^_^";
 
-    @Value("${proxy.this.port}")
-    private int thisProxyPort;
+    @Value("${Listen}")
+    private int listenPort;
 
-    @Value("${proxy.this.ignore}")
-    private String thisProxyIgnore;
+    @Value("${NoProxy}")
+    private String ignoreHosts;
 
-    @Value("${proxy.origin.host}")
-    private String originProxyHost;
-
-    @Value("${proxy.origin.port}")
-    private int originProxyPort;
-
-    @Value("${proxy.origin.addr}")
-    private String originProxyAddress;
-
-    @Value("${proxy.domestic.host}")
-    private String domesticProxyHost;
-
-    @Value("${proxy.domestic.port}")
-    private int domesticProxyPort;
-
-    @Value("${proxy.domestic.addr}")
-    private String domesticProxyAddress;
-
+    @Value("${ProxyServers}")
+    private String[] proxyServers;
 
     public static void main(String[] args) {
         SpringApplication.run(ProxyApplication.class, args);
@@ -51,24 +35,14 @@ public class ProxyApplication implements CommandLineRunner {
         Arrays.stream(args).forEach(System.out::println);
 
         if (args.length > 0) {
-            thisProxyIgnore = args[0];
+            ignoreHosts = args[0];
         }
 
-        TraceRouteUtil.setIgnoredHosts(thisProxyIgnore);
-        TraceRouteUtil.setLocalProxyHost(domesticProxyHost);
-        TraceRouteUtil.setLocalProxyPort(domesticProxyPort);
-        TraceRouteUtil.setRemoteProxyHost(originProxyHost);
-        TraceRouteUtil.setRemoteProxyPort(originProxyPort);
-        TraceRouteUtil.init();
+        TraceRouteUtil.setIgnoredHosts(ignoreHosts);
+        TraceRouteUtil.setProxyServers(proxyServers);
+        //TraceRouteUtil.init();
 
-        ProxyProcessor.setOriginProxyHost(originProxyHost);
-        ProxyProcessor.setOriginProxyPort(originProxyPort);
-        ProxyProcessor.setOriginProxyAddress(originProxyAddress);
-        ProxyProcessor.setDomesticProxyHost(domesticProxyHost);
-        ProxyProcessor.setDomesticProxyPort(domesticProxyPort);
-        ProxyProcessor.setDomesticProxyAddress(domesticProxyAddress);
-
-        ProxyDaemon daemon = new ProxyDaemon(thisProxyPort);
+        ProxyDaemon daemon = new ProxyDaemon(listenPort);
         Thread proxy = new Thread(daemon);
         proxy.start();
 
@@ -80,7 +54,7 @@ public class ProxyApplication implements CommandLineRunner {
     }
 
     private void printGreetingMessage() {
-        String printInfo = String.format("  Proxy Initialed, PORT:%d  ", thisProxyPort);
+        String printInfo = String.format("  Proxy Initialed, PORT:%d  ", listenPort);
         int prefixLength = (PRINTLN_SEPARATOR_LINE.length() - printInfo.length()) / 2;
 //        String prefixInfo = "-".repeat(prefixLength);
         String prefixInfo = "";

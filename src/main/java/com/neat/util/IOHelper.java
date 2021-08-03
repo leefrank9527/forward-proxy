@@ -1,16 +1,13 @@
 package com.neat.util;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
+import java.util.concurrent.TimeUnit;
 
 public class IOHelper {
-    private static final int STREAM_BUFFER_LENGTH = 1024;
+    private static final int STREAM_BUFFER_LENGTH = 1024 * 64;
 
     public static String readln(InputStream inputStream) {
         ByteArrayOutputStream bufLine = new ByteArrayOutputStream();
@@ -43,7 +40,7 @@ public class IOHelper {
     }
 
     public static void writeln(OutputStream outputStream, String s) {
-        MultiThreadsPrint.putFinished(s);
+        //MultiThreadsPrint.putFinished(s);
 
         try {
             outputStream.write(s.getBytes());
@@ -57,53 +54,38 @@ public class IOHelper {
         return s == null || s.trim().length() == 0;
     }
 
-    public static void copy(String prefix, InputStream inputStream, OutputStream outputStream) throws IOException {
+    public static void copy(String prefixFormat, InputStream inputStream, OutputStream outputStream) throws IOException, InterruptedException {
         final byte[] buffer = new byte[STREAM_BUFFER_LENGTH];
 
-        String msg = String.format("%s, read=[0]", prefix);
-        MultiThreadsPrint.putFinished(msg);
-
-        long countRead = 0, previousCountRead = 0;
+        String key = MultiThreadsPrint.putUnFinished(String.format(prefixFormat, 0));
+        long countRead = 0;
         try {
-            int read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
-            while (read > -1) {
-                outputStream.write(buffer, 0, read);
-//                System.out.print(new String(buffer, 0, read));
-                countRead += read;
-
-                if ((countRead - previousCountRead) >= STREAM_BUFFER_LENGTH * 1024) {
-                    msg = String.format("%s, read=[%d]", prefix, countRead);
-                    MultiThreadsPrint.putFinished(msg);
-                    previousCountRead = countRead;
+            long timeUsed = 0;
+            while (timeUsed < 3000) {
+                int read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
+                if (read < 0) {
+                    break;
+                } else if (read == 0) {
+                    TimeUnit.MILLISECONDS.sleep(200);
+                    timeUsed += 200;
+                    continue;
+                } else {
+                    timeUsed = 0; //restart
+                    outputStream.write(buffer, 0, read);
+                    //String recvMsg=new String(buffer, 0, read);
+                    //System.out.println(recvMsg);
                 }
-                read = inputStream.read(buffer, 0, STREAM_BUFFER_LENGTH);
-//                System.out.println(new String(buffer));
+
+                countRead += read;
+                MultiThreadsPrint.putUnFinished(key, String.format(prefixFormat, countRead));
             }
         } finally {
-            msg = String.format("%s, read=[%d]", prefix, countRead);
-            MultiThreadsPrint.putFinished(msg);
-            System.out.println();
-        }
-    }
-
-    public static boolean isConnective(String urlLinkName) {
-        try {
-            URL url = new URL(urlLinkName);
-            URLConnection originalConnection = url.openConnection();
-            originalConnection.setConnectTimeout(3 * 1000);
-            if (urlLinkName.startsWith("https")) { //HTTPS
-                HttpsURLConnection conn = (HttpsURLConnection) originalConnection;
-                return conn.getResponseCode() != HttpsURLConnection.HTTP_INTERNAL_ERROR;
-            } else { //HTTPS
-                HttpURLConnection conn = (HttpURLConnection) originalConnection;
-                return conn.getResponseCode() != HttpURLConnection.HTTP_INTERNAL_ERROR;
+            try {
+                inputStream.close();
+                outputStream.close();
+            } finally {
+                MultiThreadsPrint.putFinished(key, String.format(prefixFormat, countRead) + " [DONE]");
             }
-        } catch (IOException e) {
-            return false;
         }
     }
-
-//    public static void debug(String s) {
-//        System.out.println(s);
-//    }
 }

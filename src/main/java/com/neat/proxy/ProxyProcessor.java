@@ -2,6 +2,8 @@ package com.neat.proxy;
 
 import com.neat.util.IOHelper;
 import com.neat.util.MultiThreadsPrint;
+import com.neat.util.ReachableType;
+import com.neat.util.TraceRouteUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -14,7 +16,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ProxyProcessor implements Runnable {
-    private static final List<String> ignoredHosts = Collections.synchronizedList(new LinkedList<>());
     private static final List<String> originProxyAddress = Collections.synchronizedList(new LinkedList<>());
     private static final List<String> domesticProxyAddress = Collections.synchronizedList(new LinkedList<>());
 
@@ -47,30 +48,19 @@ public class ProxyProcessor implements Runnable {
         String firstLine = IOHelper.readln(southInputStream);
         UrlEntity urlEntity = UrlEntity.getInstance(firstLine);
 
-        boolean isIgnoredHost = isIgnoredHost(urlEntity.getHostName());
-        try {
-            if (isIgnoredHost) {
-                this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
-            } else if (isDomesticHost(urlEntity.getHostName()))
-                this.northSocket = new Socket(domesticProxyHost, domesticProxyPort);
-            else {
-                this.northSocket = new Socket(originProxyHost, originProxyPort);
-            }
-
-//            else {
-//                Socket socket=new Socket(urlEntity.getHostName(),urlEntity.getHostPort());
-//
-//                this.northSocket = new Socket(domesticProxyHost, domesticProxyPort);
-//                if (!this.northSocket.getInetAddress().isReachable(1000)) {
-//                    this.northSocket = new Socket(originProxyHost, originProxyPort);
-//                }
-//            }
-
-
-        } catch (IOException e) {
-            MultiThreadsPrint.putFinished(firstLine + ": " + e.getMessage());
+        ReachableType reachableType = TraceRouteUtil.getReachableType(urlEntity);
+        if (reachableType == ReachableType.PROXY_IGNORE) {
+            this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
+        } else if (reachableType == ReachableType.PROXY_LOCAL) {
+            this.northSocket = new Socket(domesticProxyHost, domesticProxyPort);
+        } else if (reachableType == ReachableType.PROXY_REMOTE) {
+            this.northSocket = new Socket(originProxyHost, originProxyPort);
+        } else {
+            MultiThreadsPrint.putFinished(firstLine + ": " + "Failed to get the reachable");
+            close();
             return;
         }
+
 
         InputStream northInputStream = northSocket.getInputStream();
         OutputStream northOutputStream = northSocket.getOutputStream();
@@ -80,7 +70,7 @@ public class ProxyProcessor implements Runnable {
           2. For HTTPS without Proxy: skipped HTTPS negotiation headers.
          */
         String transferredRequestLine = urlEntity.getTransferredRequestLine();
-        if (!isIgnoredHost || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
+        if (reachableType != ReachableType.PROXY_IGNORE || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
             if (urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
                 IOHelper.writeln(northOutputStream, firstLine);
             } else {
@@ -99,13 +89,13 @@ public class ProxyProcessor implements Runnable {
             IOHelper.writeln(southOutputStream, "");
         }
 
+
         Thread tA = new Thread(() -> {
             try {
                 IOHelper.copy(firstLine, southInputStream, northOutputStream);
             } catch (IOException e) {
                 MultiThreadsPrint.putFinished("Upload: " + e.getMessage());
             }
-//            close();
         });
         Thread tB = new Thread(() -> {
             try {
@@ -113,7 +103,6 @@ public class ProxyProcessor implements Runnable {
             } catch (IOException e) {
                 MultiThreadsPrint.putFinished("Download: " + e.getMessage());
             }
-//            close();
         });
 
         tA.start();
@@ -154,18 +143,6 @@ public class ProxyProcessor implements Runnable {
         }
     }
 
-    private static boolean isIgnoredHost(String hostName) {
-        if (StringUtils.isEmpty(hostName)) {
-            return false;
-        }
-
-        for (String s : ignoredHosts) {
-            if (hostName.contains(s)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     private static boolean isDomesticHost(String hostName) {
         if (StringUtils.isEmpty(hostName)) {
@@ -180,12 +157,7 @@ public class ProxyProcessor implements Runnable {
         return false;
     }
 
-    public static void setIgnoredHosts(String ignoredHosts) {
-        String[] items = ignoredHosts.split(";");
-        for (String item : items) {
-            ProxyProcessor.ignoredHosts.add(item.toLowerCase());
-        }
-    }
+
 
 //    private static Proxy createProxy(String proxyHost, int proxyPort) {
 //        Authenticator.setDefault(new Authenticator() {

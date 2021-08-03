@@ -1,6 +1,7 @@
 package com.neat.proxy;
 
 import com.neat.util.MultiThreadsPrint;
+import com.neat.util.TraceRouteUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -53,7 +54,13 @@ public class ProxyApplication implements CommandLineRunner {
             thisProxyIgnore = args[0];
         }
 
-        ProxyProcessor.setIgnoredHosts(thisProxyIgnore);
+        TraceRouteUtil.setIgnoredHosts(thisProxyIgnore);
+        TraceRouteUtil.setLocalProxyHost(domesticProxyHost);
+        TraceRouteUtil.setLocalProxyPort(domesticProxyPort);
+        TraceRouteUtil.setRemoteProxyHost(originProxyHost);
+        TraceRouteUtil.setRemoteProxyPort(originProxyPort);
+        TraceRouteUtil.init();
+
         ProxyProcessor.setOriginProxyHost(originProxyHost);
         ProxyProcessor.setOriginProxyPort(originProxyPort);
         ProxyProcessor.setOriginProxyAddress(originProxyAddress);

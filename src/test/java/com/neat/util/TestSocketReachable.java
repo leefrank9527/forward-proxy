@@ -38,7 +38,5 @@ public class TestSocketReachable {
         System.out.printf("%s:%d reachable=>%s \r\n", host, port, Boolean.toString(reachable));
 
         return reachable;
-
-
     }
 }

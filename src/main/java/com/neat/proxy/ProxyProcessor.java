@@ -34,16 +34,17 @@ public class ProxyProcessor implements Runnable {
         String firstLine = IOHelper.readln(southInputStream);
         UrlEntity urlEntity = UrlEntity.getInstance(firstLine);
 
-        EntityProxyRoute proxyRoute = TraceRouteUtil.getProxyRoute(urlEntity);
-        if (proxyRoute.getReachableType() == ReachableType.PROXY_IGNORE) {
-            this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
-        } else if (proxyRoute.getReachableType() == ReachableType.PROXY_LOCAL || proxyRoute.getReachableType() == ReachableType.PROXY_REMOTE) {
-            this.northSocket = new Socket(proxyRoute.getHost(), proxyRoute.getPort());
-        } else {
-            MultiThreadsPrint.putFinished(firstLine + ": " + "Failed to get the reachable");
-            close();
-            return;
-        }
+//        EntityProxyRoute proxyRoute = TraceRouteUtil.getProxyRoute(urlEntity);
+//        if (proxyRoute.getReachableType() == ReachableType.PROXY_IGNORE) {
+//            this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
+//        } else if (proxyRoute.getReachableType() == ReachableType.PROXY_LOCAL || proxyRoute.getReachableType() == ReachableType.PROXY_REMOTE) {
+//            this.northSocket = new Socket(proxyRoute.getHost(), proxyRoute.getPort());
+//        } else {
+//            MultiThreadsPrint.putFinished(firstLine + ": " + "Failed to get the reachable");
+//            close();
+//            return;
+//        }
+        this.northSocket = new Socket(urlEntity.getHostName(), urlEntity.getHostPort());
 
         InputStream northInputStream = northSocket.getInputStream();
         OutputStream northOutputStream = northSocket.getOutputStream();
@@ -53,12 +54,8 @@ public class ProxyProcessor implements Runnable {
           2. For HTTPS without Proxy: skipped HTTPS negotiation headers.
          */
         String transferredRequestLine = urlEntity.getTransferredRequestLine();
-        if (proxyRoute.getReachableType() != ReachableType.PROXY_IGNORE || urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
-            if (urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
-                IOHelper.writeln(northOutputStream, firstLine);
-            } else {
-                IOHelper.writeln(northOutputStream, transferredRequestLine);
-            }
+        if ( urlEntity.getScheme().equals(UrlEntity.SCHEME_HTTP)) {
+            IOHelper.writeln(northOutputStream, firstLine);
         } else { //HTTPS without proxy: to skip the lines for proxy
             while (true) {
                 String headerLine = IOHelper.readln(southInputStream);
